@@ -69,6 +69,7 @@ skills/solana-dev/
     ├── idl-codegen.md               # IDL and client generation
     ├── payments.md                  # Payments (Kit, Solana Pay, Kora)
     ├── security.md                  # Security vulnerabilities & prevention
+    ├── pre-trade-token-risk.md      # Checking a mint before an agent/app acquires it
     ├── concepts.md                  # Runtime concepts (rent, PDAs, entrypoint, wire format)
     ├── resources.md                 # Curated reference links
     ├── compatibility-matrix.md      # Version compatibility tables (Anchor/Solana/Rust/GLIBC)
@@ -100,6 +101,7 @@ Once installed, your agent will automatically use this skill when you ask about:
 - Client SDK generation (typed program clients)
 - Local testing (Surfpool, LiteSVM, Mollusk)
 - Security hardening and audit-style reviews
+- Pre-trade token checks for agents and apps that acquire arbitrary mints
 - Surfpool local network setup and cheatcodes
 - **Toolchain issues** (version mismatches, GLIBC errors, dependency conflicts)
 - **Migration** between Anchor/Solana CLI versions, and web3.js v1 → v3

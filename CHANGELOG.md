@@ -2,6 +2,11 @@
 
 Versions track the `metadata.version` field in `skills/solana-dev/SKILL.md`. Earlier releases predate this file; see the git history.
 
+## 2.6.0 — Unreleased
+
+- New pre-trade-token-risk.md: checks to run before an agent or app acquires an arbitrary mint — mint/freeze authority, Token-2022 extensions that change ownership guarantees (permanent delegate, transfer hook, transfer fee, default-frozen, pausable, non-transferable), holder concentration by owner with provable custody exclusions (burn, launchpad curve PDA, AMM pools), liquidity and exit quotes, unknown-is-not-a-pass, and decoding plus simulating a built transaction before signing.
+- SKILL.md routes to it; security.md's client-side checklist links it.
+
 ## 2.5.1 — 2026-10-02
 
 - transactions-v1.md and compatibility-matrix.md: `solana-go` v1 support shipped in v2.0.0.

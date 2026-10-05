@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires Node.js 20.18+, Rust toolchain, Solana CLI, Anchor CLI
 metadata:
   author: Solana Foundation
-  version: "2.5.1"
+  version: "2.6.0"
 ---
 
 # Solana Development Skill
@@ -21,6 +21,7 @@ Use this Skill when the user asks for:
 - Client SDK generation (typed program clients)
 - Local testing (Surfpool, LiteSVM, Mollusk) and fuzz testing (Trident, cargo-fuzz)
 - Security hardening and audit-style reviews
+- Pre-trade token checks for agents and apps that acquire arbitrary mints (authorities, Token-2022 extensions, holder concentration, liquidity)
 - Confidential transfers (Token-2022 ZK extension)
 - **Toolchain setup, version mismatches, GLIBC errors, dependency conflicts**
 - **Upgrading Anchor/Solana CLI versions, migration between versions**
@@ -188,6 +189,7 @@ Surfpool also ships its own MCP server (`surfpool mcp`, stdio) for driving local
 - Payments: [payments.md](references/payments.md)
 - Confidential transfers: [confidential-transfers.md](references/confidential-transfers.md)
 - Security checklist: [security.md](references/security.md)
+- Pre-trade token risk (agents/apps acquiring arbitrary mints): [pre-trade-token-risk.md](references/pre-trade-token-risk.md) — mint/freeze authority, risky Token-2022 extensions, holder concentration, liquidity, decode-before-sign
 - Reference links: [resources.md](references/resources.md)
 - **Version compatibility:** [compatibility-matrix.md](references/compatibility-matrix.md)
 - **Common errors & fixes:** [common-errors.md](references/common-errors.md)

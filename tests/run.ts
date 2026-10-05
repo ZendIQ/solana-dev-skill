@@ -182,8 +182,12 @@ const triggerCases: TestCase[] = [
   { prompt: "My indexer reports 0 priority fee for some transactions", expected: true },
   { prompt: "getBlock is failing with maxSupportedTransactionVersion", expected: true },
   { prompt: "What do I need to change to support 4096-byte Solana transactions?", expected: true },
+  { prompt: "Check a Token-2022 mint for a permanent delegate or transfer hook before my agent swaps into it", expected: true },
+  { prompt: "My Solana trading bot flags every pump.fun token as a whale because of the bonding curve", expected: true },
+  { prompt: "Decode and simulate a Solana swap transaction from an aggregator API before signing it", expected: true },
   // ❌ Should NOT trigger
   { prompt: "Build me a React app", expected: false },
+  { prompt: "Check whether this ERC-20 token is a honeypot before my bot buys it", expected: false },
   { prompt: "How do I use the Claude API?", expected: false },
   { prompt: "Write a REST API in Node.js", expected: false },
   { prompt: "Create a video with Remotion", expected: false },

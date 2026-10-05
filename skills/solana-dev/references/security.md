@@ -405,6 +405,7 @@ Add both checks to your `TryFrom` account validation alongside signer and owner 
 - [ ] Handle blockhash expiry and retry with fresh blockhash
 - [ ] Treat "signature received" as not-final; track confirmation
 - [ ] Never assume token program variant; detect Token-2022 vs classic
+- [ ] Before acquiring an arbitrary mint (swap, deposit, listing), run the checks in [pre-trade-token-risk.md](pre-trade-token-risk.md)
 - [ ] Validate transaction simulation results before signing
 - [ ] Show clear error messages for common failure modes
 
