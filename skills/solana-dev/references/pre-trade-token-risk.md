@@ -73,20 +73,45 @@ These extensions let someone other than the holder move, block, or tax the holde
 Unset optional authorities decode as the all-zero address:
 
 ```ts
+import { AccountState } from '@solana-program/token-2022';
+
 const NONE = '11111111111111111111111111111111';
 const flags: string[] = [];
 for (const ext of (await readMint(mint)).extensions) {
-  if (ext.__kind === 'PermanentDelegate' && ext.delegate !== NONE) flags.push(`permanent delegate ${ext.delegate}`);
-  if (ext.__kind === 'TransferHook' && ext.programId !== NONE) flags.push(`transfer hook ${ext.programId}`);
-  if (ext.__kind === 'TransferFeeConfig') {
-    const bps = Math.max(ext.olderTransferFee.transferFeeBasisPoints, ext.newerTransferFee.transferFeeBasisPoints);
-    if (bps > 0 || ext.transferFeeConfigAuthority !== NONE) flags.push(`transfer fee ${bps} bps, changeable`);
+  switch (ext.__kind) {
+    case 'PermanentDelegate':
+      if (ext.delegate !== NONE) flags.push(`permanent delegate ${ext.delegate}`);
+      break;
+    case 'TransferHook':
+      // An unset program with a live authority can still be switched on later
+      if (ext.programId !== NONE) flags.push(`transfer hook ${ext.programId}`);
+      else if (ext.authority !== NONE) flags.push(`transfer hook unset, ${ext.authority} can set one`);
+      break;
+    case 'TransferFeeConfig': {
+      const bps = Math.max(ext.olderTransferFee.transferFeeBasisPoints, ext.newerTransferFee.transferFeeBasisPoints);
+      const changeable = ext.transferFeeConfigAuthority !== NONE;
+      if (bps > 0 || changeable) flags.push(`transfer fee ${bps} bps, ${changeable ? 'changeable' : 'fixed'}`);
+      break;
+    }
+    case 'DefaultAccountState':
+      if (ext.state === AccountState.Frozen) flags.push('new accounts start frozen');
+      break;
+    case 'PausableConfig': {
+      const authority = unwrapOption(ext.authority);
+      if (ext.paused) flags.push('transfers paused');
+      else if (authority) flags.push(`pausable by ${authority}`);
+      break;
+    }
+    case 'NonTransferable':
+      flags.push('non-transferable');
+      break;
   }
-  if (ext.__kind === 'NonTransferable') flags.push('non-transferable');
 }
 ```
 
-Severity depends on context. PYUSD, a regulated stablecoin, carries `PermanentDelegate`, a `TransferFeeConfig` at 0 bps with an authority set, and a `TransferHook` with no program set. On an anonymous token with a DEX pool, the same extensions are a direct path to losing the position. Report each capability and who holds it; don't treat the presence of an extension as a verdict.
+An empty `flags` list covers only the extensions in the table above.
+
+Severity depends on context. PYUSD, a regulated stablecoin, carries `PermanentDelegate`, a `TransferFeeConfig` at 0 bps with an authority set, and a `TransferHook` with no program set but an authority that could set one. On an anonymous token with a DEX pool, the same extensions are a direct path to losing the position. Report each capability and who holds it; don't treat the presence of an extension as a verdict.
 
 ## Holder concentration
 
@@ -94,7 +119,7 @@ Severity depends on context. PYUSD, a regulated stablecoin, carries `PermanentDe
 
 - A pump.fun token still on its bonding curve keeps most of its supply in the curve's token account. That is 100% at launch, so every such token looks like one whale.
 - After graduation, the pool vault holds a large share.
-- A wallet that spreads its balance over several accounts looks like several small holders.
+- A wallet that spreads its balance over several accounts looks like several small holders, or doesn't appear at all if each account is below the 20th largest.
 
 Resolve each account's owner, sum by owner, and exclude only custody you can **prove**:
 
@@ -111,6 +136,7 @@ import { getTokenDecoder } from '@solana-program/token-2022';
 const BURN = new Set<string>(['1nc1nerator11111111111111111111111111111111']);
 const AMM_PROGRAMS = new Set<string>(['pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA']); // add the venues you support
 
+const { supply } = await readMint(mint);
 const [curve] = await getProgramDerivedAddress({
   programAddress: address('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
   seeds: ['bonding-curve', getAddressEncoder().encode(mint)],
@@ -137,9 +163,14 @@ largest.forEach(({ amount }, i) => {
   if (reason) excluded.push({ owner, reason });
   else holders.set(owner, (holders.get(owner) ?? 0n) + BigInt(amount));
 });
+
+// Supply held outside the 20 listed accounts. One owner could hold all of it across smaller accounts.
+const unlisted = supply - largest.reduce((sum, { amount }) => sum + BigInt(amount), 0n);
 ```
 
-Report top-holder shares of supply after exclusions, together with the excluded list, so anyone can check the result. Public RPC endpoints rate-limit `getTokenLargestAccounts` heavily. A 429 there leaves the check unknown, not clean.
+Per-owner totals from the top 20 are **lower bounds**. If `unlisted` is at or above the share you treat as concentrated, one owner could be hiding in it, so the check is unknown, not a pass. To close the gap, list every token account of the mint (`getProgramAccounts` on the token program, `memcmp` on the mint at offset 0) or use an indexer, then sum by owner.
+
+Report top-holder shares of supply after exclusions, together with the excluded list and `unlisted`, so anyone can check the result. Public RPC endpoints rate-limit `getTokenLargestAccounts` heavily, and many disable `getProgramAccounts` on token programs. A 429 or a disabled method leaves the check unknown, not clean.
 
 ## Liquidity and price impact
 
@@ -187,14 +218,14 @@ const [inputAfter, outputAfter] = sim.accounts.map((a) =>
 // require: outputAfter - outputBefore >= your minimum, inputBefore - inputAfter <= requested amount
 ```
 
-Reject the transaction if the fee payer, programs, mints, or balance changes differ from what you asked for. Also reject it if it runs `Approve`, `SetAuthority` or `CloseAccount` on your accounts, or transfers to anyone you didn't ask to pay. A response for a different mint with the same symbol is a known pattern, so compare addresses, never names.
+Reject the transaction if the fee payer, programs, mints, or balance changes differ from what you asked for. Also reject it if it runs `Approve` or `SetAuthority` on your accounts, or transfers to anyone you didn't ask to pay. `CloseAccount` on your accounts is expected in one case: SOL swaps wrap SOL into a temporary account for the native mint (`So11111111111111111111111111111111111111112`) and close it at the end. Allow that only when the closed account holds the native mint and its lamports go to you; reject any other closure. A response for a different mint with the same symbol is a known pattern, so compare addresses, never names.
 
 ## Checklist
 
 - [ ] Mint exists and is owned by SPL Token or Token-2022
 - [ ] Mint and freeze authority read on chain; holders named
 - [ ] `PermanentDelegate`, `TransferHook`, `TransferFeeConfig`, `DefaultAccountState`, `PausableConfig` checked; `NonTransferable` stops the trade
-- [ ] Concentration computed per owner; custody excluded only by derivation or program ownership; exclusions listed
+- [ ] Concentration computed per owner; custody excluded only by derivation or program ownership; exclusions and unlisted supply reported
 - [ ] Entry and exit quoted at real size; minimum output set from your own tolerance
 - [ ] Each check reported as pass, fail, or unknown, and unknowns surfaced
 - [ ] Base rates reported separately from evidence
