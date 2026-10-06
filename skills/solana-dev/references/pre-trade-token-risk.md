@@ -118,13 +118,14 @@ Severity depends on context. PYUSD, a regulated stablecoin, carries `PermanentDe
 `getTokenLargestAccounts` returns the 20 largest **token accounts**, not owners. Concentration computed directly from it is wrong in both directions:
 
 - A pump.fun token still on its bonding curve keeps most of its supply in the curve's token account. That is 100% at launch, so every such token looks like one whale.
+- A pump.fun Mayhem Mode launch mints 2B tokens and gives 1B to an AI trading agent, so its vault holds ~50% from the first block.
 - After graduation, the pool vault holds a large share.
 - A wallet that spreads its balance over several accounts looks like several small holders, or doesn't appear at all if each account is below the 20th largest.
 
 Resolve each account's owner, sum by owner, and exclude only custody you can **prove**:
 
 1. **Burn**: exact match on a burn address (`1nc1nerator11111111111111111111111111111111`).
-2. **Launchpad curve**: re-derive the curve PDA for *this* mint and compare. For pump.fun the seeds are `['bonding-curve', mint]` under program `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`.
+2. **Launchpad custody**: re-derive the launchpad's PDAs and compare. For pump.fun the curve is `['bonding-curve', mint]` under program `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`, and the Mayhem Mode agent vault, shared by every Mayhem launch, is `['sol-vault']` under `MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e`.
 3. **AMM pool**: the owner is an account owned by a known AMM program (a PumpSwap pool is owned by `pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA`), or it is a program-wide vault authority you re-derive. For Raydium AMM v4 that is seed `'amm authority'` under `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`.
 
 **Never exclude an on-curve owner.** It is a wallet, whatever an indexer labels it. Off-curve owners you can't attribute stay counted and are listed. A launchpad, router, or pool you haven't added a rule for then shows up as a holder you can explain, instead of a holder you hid.
@@ -140,6 +141,10 @@ const { supply } = await readMint(mint);
 const [curve] = await getProgramDerivedAddress({
   programAddress: address('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
   seeds: ['bonding-curve', getAddressEncoder().encode(mint)],
+});
+const [mayhemVault] = await getProgramDerivedAddress({
+  programAddress: address('MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'),
+  seeds: ['sol-vault'],
 });
 const { value: largest } = await rpc.getTokenLargestAccounts(mint).send();
 const tokenAccounts = await fetchEncodedAccounts(rpc, largest.map((l) => l.address));
@@ -158,6 +163,7 @@ largest.forEach(({ amount }, i) => {
     BURN.has(owner) ? 'burn'
     : !isOffCurveAddress(owner) ? null // wallet: always counted
     : owner === curve ? 'bonding curve'
+    : owner === mayhemVault ? 'pump.fun Mayhem vault'
     : ownerAccount.exists && AMM_PROGRAMS.has(ownerAccount.programAddress) ? `pool (${ownerAccount.programAddress})`
     : null; // off-curve but unattributed: still counted
   if (reason) excluded.push({ owner, reason });
