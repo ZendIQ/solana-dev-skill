@@ -71,6 +71,7 @@ skills/solana-dev/
     ├── kit-web3-interop.md          # Legacy web3.js routing (v3 RC + migration skill)
     ├── testing.md                   # Testing (Surfpool/LiteSVM/Mollusk)
     ├── idl-codegen.md               # IDL and client generation
+    ├── tokens.md                    # Token concepts (mints, ATAs, authorities, delegation, Token-2022 extensions)
     ├── payments.md                  # Payments (Kit, Solana Pay, Kora)
     ├── security.md                  # Security vulnerabilities & prevention
     ├── concepts.md                  # Runtime concepts (rent, PDAs, entrypoint, wire format)
