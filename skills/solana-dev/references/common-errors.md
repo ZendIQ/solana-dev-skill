@@ -475,23 +475,20 @@ Error: Cannot find native binding.
 cause: litesvm.linux-x64-gnu.node: undefined symbol: __isoc23_strtol
 ```
 
-**Root cause:** LiteSVM 0.5.0 native binary is compiled against GLIBC 2.38+. The `__isoc23_strtol` symbol was introduced in GLIBC 2.38 (C23 standard functions). Systems with GLIBC < 2.38 (Ubuntu 22.04, Debian 12, etc.) cannot load this binary.
+**Root cause:** the old LiteSVM 0.5.0 npm binary was compiled against GLIBC 2.38+. The `__isoc23_strtol` symbol was introduced in GLIBC 2.38 (C23 standard functions), so systems with GLIBC < 2.38 (Ubuntu 22.04, Debian 12, etc.) could not load it.
 
-**Verified on:** Debian 12 (GLIBC 2.36) — Jan 2026
+**Verified on:** Debian 12 (GLIBC 2.36) with `litesvm` 0.5.0 — Jan 2026
 
 **Solutions:**
-1. **Upgrade OS** to Ubuntu 24.04+ or Debian 13+ (recommended)
+1. **Upgrade `litesvm`** to the current 1.x (1.6.0 as of Oct 2026). Its gnu binaries are cross-built on Ubuntu 22.04 runners, and musl builds (`litesvm-linux-{x64,arm64}-musl`) ship alongside them. Delete `node_modules` and the lockfile entry so the right optional binary is installed.
 2. **Use Docker:**
    ```dockerfile
    FROM ubuntu:24.04
    RUN apt-get update && apt-get install -y nodejs npm
    ```
-3. **Fall back to `solana-bankrun`** if you can't upgrade:
-   ```bash
-   pnpm remove litesvm anchor-litesvm
-   pnpm add -D solana-bankrun anchor-bankrun
-   ```
-4. **Try litesvm 0.3.x** which may work on older GLIBC versions
+3. **Upgrade the OS** to Ubuntu 24.04+ or Debian 13+.
+
+Do not switch to `solana-bankrun`: it is deprecated in favor of LiteSVM.
 
 ### `Cannot find module './litesvm.linux-x64-gnu.node'`
 ```
@@ -691,8 +688,8 @@ Environment: Rust 1.93, Solana CLI 2.2.16, Anchor CLI 0.30.1, Node 22.22.0, GLIB
 | Platform tools corruption | `cargo build-sbf` on fresh install | ❌ FAIL then PASS | Initial corruption due to disk space; fixed with `--force-tools-install` on adequate disk |
 
 ### Key Findings
-1. **litesvm 0.5.0 npm is BROKEN on Debian 12** (GLIBC 2.36) — use `solana-bankrun` as fallback
-2. **solana-bankrun works perfectly** on GLIBC 2.36 — recommended for Debian 12
+1. **litesvm 0.5.0 npm was broken on Debian 12** (GLIBC 2.36) — upgrade to litesvm 1.x, which ships cross-built gnu and musl binaries
+2. **solana-bankrun loaded** on GLIBC 2.36, but it is now deprecated — do not adopt it for new work
 3. **Platform-tools v1.48 needs ~2GB disk** for extraction — symlink `~/.cache/solana/` to a larger partition if root is small
 4. **Anchor CLI 0.30.1 successfully builds anchor-lang 0.32.1** — warnings only, no errors
 5. **Node 22 has full ESM+CJS support** for all Solana JS packages tested

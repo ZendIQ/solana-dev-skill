@@ -12,7 +12,7 @@ This skill gives your coding agent deep knowledge of the current Solana developm
 
 - **SDK**: `@solana/kit` 8 plugin clients (`createClient()` + `.use()`), building transaction v1 by default
 - **UI**: Wallet Standard connection via `@solana/kit-plugin-wallet` + `@solana/react`
-- **Legacy Interop**: web3.js v3 (RC) — the classic API rebuilt on Kit internals, as the migration target for v1 codebases
+- **Legacy Interop**: web3.js v3 — the classic API rebuilt on Kit internals, as the migration target for v1 codebases
 - **Programs**: Anchor 1.2.x (default), Pinocchio 0.11+ for high-performance needs
 - **Testing**: Surfpool for integration tests (mainnet forking, cheatcodes, embedded SDK), LiteSVM/Mollusk for unit tests
 - **Codegen**: Codama-first IDL and client generation
@@ -68,7 +68,7 @@ skills/solana-dev/
 └── references/
     ├── kit/                         # @solana/kit: overview, plugins, react, codecs, accounts, codama, gotchas, advanced, programs/
     ├── frontend.md                  # UI patterns (Kit wallet plugin + @solana/react)
-    ├── kit-web3-interop.md          # Legacy web3.js routing (v3 RC + migration skill)
+    ├── kit-web3-interop.md          # Legacy web3.js routing (v3 + migration skill)
     ├── testing.md                   # Testing (Surfpool/LiteSVM/Mollusk)
     ├── idl-codegen.md               # IDL and client generation
     ├── tokens.md                    # Token concepts (mints, ATAs, authorities, delegation, Token-2022 extensions)
@@ -130,7 +130,7 @@ This skill encodes opinionated best practices:
 
 | Layer | Default Choice | Alternative |
 |-------|---------------|-------------|
-| Client SDK | @solana/kit 8 (plugin clients, transaction v1) | web3.js v3 RC (legacy migration target) |
+| Client SDK | @solana/kit 8 (plugin clients, transaction v1) | web3.js v3 (legacy migration target) |
 | Wallet / UI | @solana/kit-plugin-wallet + @solana/react | Wallet Standard hooks directly |
 | Program Framework | Anchor 1.2.x | Pinocchio 0.11+ (performance) |
 | Unit Testing | LiteSVM / Mollusk | — |
@@ -144,7 +144,7 @@ This skill incorporates best practices from:
 - [Blueshift Learning Platform](https://learn.blueshift.gg/) - Comprehensive Solana courses
 - [Solana Official Documentation](https://solana.com/docs)
 - [Solana Kit](https://www.solanakit.com/) - Kit docs and plugin ecosystem
-- [solana-web3.js v3](https://github.com/solana-foundation/solana-web3.js/tree/v3.x) - Classic API on Kit internals
+- [solana-web3.js v3](https://github.com/solana-foundation/solana-web3.js) - Classic API on Kit internals
 - [Anza/Pinocchio](https://github.com/anza-xyz/pinocchio) - Zero-dependency program development
 - [LiteSVM](https://github.com/LiteSVM/litesvm) - Lightweight testing
 - [Surfpool](https://docs.surfpool.run/) - Integration testing with mainnet state
