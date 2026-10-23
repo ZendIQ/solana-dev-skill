@@ -17,7 +17,7 @@ Concepts shared by both token programs. For instruction-level code, see [Related
 
 ## The token model
 
-A **mint** describes one token: supply, decimals, and its mint and freeze authorities. A **token account** holds a balance of one mint for one owner: mint, owner, amount, delegate, state (initialized or frozen) and close authority. Balances never sit in a wallet's system account; a wallet holds one token account per mint it owns.
+A **mint** describes one token: supply, decimals, and its mint and freeze authorities. A **token account** holds a balance of one mint for one owner: mint, owner, amount, delegate, state (initialized or frozen) and close authority. Balances never sit in a wallet's system account; a wallet can hold one or more token accounts per mint, and only one of them is its ATA.
 
 Both are accounts owned by the token program. The `owner` *field* of a token account is the wallet or PDA that controls the balance. It is not the account's program owner, which is always the token program.
 
@@ -31,7 +31,7 @@ The ATA program creates Token-2022 ATAs with `ImmutableOwner`, so their owner ca
 
 | Authority | Lives on | What it can do | Once set to none |
 |---|---|---|---|
-| Mint authority | Mint | `MintTo` new supply. On Token-2022, it also signs `TokenMetadata` and `TokenGroup` initialization | Supply is fixed for good |
+| Mint authority | Mint | `MintTo` new supply. On Token-2022, it also signs `TokenMetadata` and `TokenGroup` initialization | No more tokens can be minted; burns can still reduce supply |
 | Freeze authority | Mint | `FreezeAccount` / `ThawAccount` on any account of the mint. On Token-2022, it also updates `DefaultAccountState` | Nothing can be frozen, and frozen accounts can never be thawed |
 | Owner | Token account | Transfer, burn, approve and revoke a delegate, close (when no close authority is set), and transfer ownership | Cannot be removed, only transferred |
 | Close authority | Token account | `CloseAccount` once the balance is zero, reclaiming the rent lamports. Defaults to the owner when unset | The owner closes |
@@ -76,20 +76,37 @@ So Token-2022 sizes vary with the extension set. Compute them with `getMintSize`
 
 ### Finding a mint's program
 
-Read the mint account: its program owner is the token program to use for every instruction and ATA derivation involving that mint.
+Read the mint account: its program owner is the token program to use for every instruction and ATA derivation involving that mint. Then decode it with the matching client's Codama fetcher.
 
 ```ts
 import { fetchEncodedAccount } from '@solana/kit';
-import { TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
-import { TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022';
+import { fetchMint as fetchTokenMint, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token';
+import { fetchMint as fetchToken2022Mint, TOKEN_2022_PROGRAM_ADDRESS } from '@solana-program/token-2022';
 
 const account = await fetchEncodedAccount(rpc, mintAddress);
 if (!account.exists) throw new Error('mint not found');
-const tokenProgram = account.programAddress;
-if (tokenProgram !== TOKEN_PROGRAM_ADDRESS && tokenProgram !== TOKEN_2022_PROGRAM_ADDRESS) {
-  throw new Error(`not a token mint: owned by ${tokenProgram}`);
+
+// The owner picks the program, and with it the client
+const mint =
+  account.programAddress === TOKEN_PROGRAM_ADDRESS ? await fetchTokenMint(rpc, mintAddress)
+  : account.programAddress === TOKEN_2022_PROGRAM_ADDRESS ? await fetchToken2022Mint(rpc, mintAddress)
+  : null; // not a token mint
+// mint.data.decimals, mint.data.supply, mint.data.mintAuthority, mint.data.freezeAuthority
+// Token-2022 also has mint.data.extensions
+```
+
+`fetchMint` throws when no account exists at the address. When it may not exist (an address from user input, say), use `fetchMaybeMint`, which returns `exists: false` instead:
+
+```ts
+import { fetchMaybeMint } from '@solana-program/token-2022';
+
+const maybeMint = await fetchMaybeMint(rpc, mintAddress);
+if (maybeMint.exists) {
+  // maybeMint.data, maybeMint.programAddress
 }
 ```
+
+The fetchers only decode the data; they don't check which program owns the account, so read `programAddress` as above before trusting the result. To decode an account you already fetched without a second request, use `decodeMint(account)` from the same package. Token accounts have the same set: `fetchToken`, `fetchMaybeToken` and `decodeToken`.
 
 ### Why `TransferChecked`
 
@@ -147,7 +164,7 @@ The token program address is one of the ATA seeds. The same wallet and mint ther
 | `NonTransferable` | Mint | Init; permanent | None | Tokens cannot be transferred; minting and burning still work |
 | `TransferHook` | Mint | Init; program ID changeable | Transfer-hook authority | While a hook program is set, every transfer CPIs into it, and the hook can reject the transfer |
 | `InterestBearingConfig` | Mint | Init; rate changeable | Rate authority | The UI amount accrues interest; raw balances do not change |
-| `ScaledUiAmount` | Mint | Init; multiplier changeable, with an effective timestamp | Scaled-UI-amount authority | The UI amount is the raw amount × multiplier; cannot be combined with `InterestBearingConfig` |
+| `ScaledUiAmount` | Mint | Init; multiplier changeable, with an effective timestamp | Scaled-UI-amount authority | The UI amount is the raw amount × multiplier (truncated) / 10^decimals; cannot be combined with `InterestBearingConfig` |
 | `Pausable` | Mint | Init; pause and resume at any time | Pause authority | While paused, transfers, minting and burning all fail |
 | `PermissionedBurn` | Mint | Init; authority changeable or removable | Permissioned-burn authority | Every burn also needs this authority's signature; the standard burn instructions are rejected while it is set |
 | `MetadataPointer` | Mint | Init; address changeable | Metadata-pointer authority | Records which account holds the token's metadata (often the mint itself) |
