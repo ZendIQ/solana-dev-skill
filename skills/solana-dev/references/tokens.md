@@ -34,10 +34,10 @@ The ATA program creates Token-2022 ATAs with `ImmutableOwner`, so their owner ca
 | Mint authority | Mint | `MintTo` new supply. On Token-2022, it also signs `TokenMetadata` and `TokenGroup` initialization | No more tokens can be minted; burns can still reduce supply |
 | Freeze authority | Mint | `FreezeAccount` / `ThawAccount` on any account of the mint. On Token-2022, it also updates `DefaultAccountState` | Nothing can be frozen, and frozen accounts can never be thawed |
 | Owner | Token account | Transfer, burn, approve and revoke a delegate, close (when no close authority is set), and transfer ownership | Cannot be removed, only transferred |
-| Close authority | Token account | `CloseAccount` once the balance is zero, reclaiming the rent lamports. Defaults to the owner when unset | The owner closes |
+| Close authority | Token account | `CloseAccount` once the balance is zero, reclaiming the rent lamports. Defaults to the owner when unset | The owner closes, and can appoint a new close authority |
 | Mint close authority | Mint (Token-2022 `MintCloseAuthority`) | Close the mint once supply is zero | The mint cannot be closed |
 
-Each authority is changed or removed with `SetAuthority`, signed by its current holder, and removal is permanent. An authority can be a keypair, a PDA (a program signs for it) or the token program's own `Multisig` account (m-of-n). Transferring ownership of a token account clears its delegate. A closed Token-2022 mint frees its address, which can then be initialized again with different extensions; see [security.md](security.md#mint-close-and-reinitialization-attacks).
+Each authority is changed or removed with `SetAuthority`, signed by its current holder. Removing a mint's mint, freeze or mint close authority is permanent. Clearing a token account's close authority returns control to the owner, who can appoint another close authority later. An authority can be a keypair, a PDA (a program signs for it) or the token program's own `Multisig` account (m-of-n). Transferring ownership of a token account clears its delegate. A closed Token-2022 mint frees its address, which can then be initialized again with different extensions; see [security.md](security.md#mint-close-and-reinitialization-attacks).
 
 ## Delegation
 
@@ -186,7 +186,7 @@ The token program address is one of the ATA seeds. The same wallet and mint ther
 | `ConfidentialTransferAccount` | Account | Configured by the owner after init | Owner; approval from the confidential-transfer mint authority unless auto-approve is on | Encrypted pending and available balances |
 | `ConfidentialTransferFeeAmount` | Account | Added with `ConfidentialTransferAccount` on fee mints | None | Encrypted withheld fees; the account cannot be closed until they are cleared |
 
-Every authority above can be rotated or removed with `SetAuthority` (or the extension's own update-authority instruction), and once removed it cannot be set again. Some extension combinations are rejected at initialization, as noted in the table.
+Every mint-level authority above can be rotated or removed with `SetAuthority` (or the extension's own update-authority instruction), and once removed it cannot be set again. The account owner can only be transferred. Some extension combinations are rejected at initialization, as noted in the table.
 
 ## Related pages
 
